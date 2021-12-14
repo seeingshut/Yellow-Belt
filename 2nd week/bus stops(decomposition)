@@ -1,1 +1,198 @@
+#include <string>
+#include <iostream>
+#include <stack>
+#include <cassert>
+#include <vector>
+#include <map>
+#include <sstream>
+
+using namespace std;
+
+enum class QueryType {
+  NewBus,
+  BusesForStop,
+  StopsForBus,
+  AllBuses
+};
+
+struct Query {
+  QueryType type;
+  string bus;
+  string stop;
+  vector<string> stops;
+};
+
+istream& operator >> (istream& is, Query& q) {
+  string operation_code;
+    is >> operation_code;
+    if (operation_code == "NEW_BUS") {
+      q.type = QueryType::NewBus;
+      is >> q.bus;
+      int stop_count;
+      is >> stop_count;
+      std::vector<string> stops(stop_count);
+      for (auto& stop : stops) {
+        is >> stop;
+      }
+      q.stops = stops;
+    }
+    else if (operation_code == "BUSES_FOR_STOP") {
+      q.type = QueryType::BusesForStop;
+      is >> q.stop;
+    }
+    else if (operation_code == "STOPS_FOR_BUS") {
+      q.type = QueryType::StopsForBus;
+      is >> q.bus;
+    }
+    else if (operation_code == "ALL_BUSES") {
+      q.type = QueryType::AllBuses;
+    }
+
+    return is;
+}
+
+template <typename Container>
+ostream& ContainerPrint(ostream& os, const Container& c, char sep = ' ') {
+  for (const auto& item : c) {
+    os << item << sep;
+  }
+  return os;
+}
+
+struct BusesForStopResponse {
+  stringstream ss;
+};
+
+ostream& operator << (ostream& os, const BusesForStopResponse& r) {
+  os << r.ss.str();
+  return os;
+}
+
+struct StopsForBusResponse {
+  stringstream ss;
+};
+
+ostream& operator << (ostream& os, const StopsForBusResponse& r) {
+  os << r.ss.str();
+  return os;
+}
+
+struct AllBusesResponse {
+  stringstream ss;
+};
+
+ostream& operator << (ostream& os, const AllBusesResponse& r) {
+  os << r.ss.str();
+  return os;
+}
+
+class BusManager {
+public:
+  void AddBus(const string& bus, const vector<string>& stops) {
+    buses_to_stops[bus] = stops;
+    for(auto& stop : stops) {
+      stops_to_buses[stop].push_back(bus);
+    }
+  }
+
+  BusesForStopResponse GetBusesForStop(const string& stop) const {
+    BusesForStopResponse response;
+    if(stops_to_buses.count(stop) == 0) {
+      response.ss << "No stop";
+      return response;
+
+    }
+    for(auto& bus : stops_to_buses.at(stop)) {
+      response.ss << bus << ' ';
+    }
+    return response;
+}
+
+
+  StopsForBusResponse GetStopsForBus(const string& bus) const {
+    StopsForBusResponse response;
+
+    bool isFirstLine = true;
+    if(buses_to_stops.count(bus) == 0) {
+      response.ss << "No bus";
+      return response;
+    }
+    for(auto& stop : buses_to_stops.at(bus)) {
+      if (!isFirstLine) {
+        response.ss << endl;
+      }
+       else {
+         isFirstLine = false;
+      }
+      response.ss << "Stop " << stop << ":";
+
+      if(stops_to_buses.at(stop).size() == 1) {
+        response.ss << " no interchange";
+      }
+      else {
+        for(auto& interchange : stops_to_buses.at(stop)) {
+          if(interchange != bus) {
+          response.ss << ' ' << interchange;
+          }
+        }
+      }
+    }
+    return response;
+  }
+
+  AllBusesResponse GetAllBuses() const {
+    AllBusesResponse response;
+    bool isFirstLine = true;
+    if(buses_to_stops.empty()) {
+      response.ss << "No buses";
+      return response;
+    }
+    for(auto& bus: buses_to_stops) {
+      if (!isFirstLine) {
+        response.ss << endl;
+      }
+       else {
+         isFirstLine = false;
+      }
+      response.ss << "Bus " << bus.first << ":";
+      for(auto& stop : bus.second) {
+        response.ss << ' ' << stop;
+      }
+    }
+    return response;
+  }
+
+private:
+  map<string, vector<string>> buses_to_stops;
+  map<string, vector<string>> stops_to_buses;
+};
+
+
+int main() {
+  int query_count;
+  Query q;
+
+  cin >> query_count;
+
+  BusManager bm;
+  for (int i = 0; i < query_count; ++i) {
+    cin >> q;
+    switch (q.type) {
+    case QueryType::NewBus:
+      bm.AddBus(q.bus, q.stops);
+      break;
+    case QueryType::BusesForStop:
+      cout << bm.GetBusesForStop(q.stop);
+      break;
+    case QueryType::StopsForBus:
+      cout << bm.GetStopsForBus(q.bus);
+      break;
+    case QueryType::AllBuses:
+      cout << bm.GetAllBuses();
+      break;
+    }
+  }
+
+  return 0;
+}
 
